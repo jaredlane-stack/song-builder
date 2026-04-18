@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Song Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Playfair+Display+SC:wght@700&family=Lato:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F2EDE4;          /* warm cream — like the poster paper */
+    --surface: #FDFAF5;     /* off-white card */
+    --surface2: #EDE8DF;    /* slightly darker cream */
+    --border: #C8BFB0;      /* warm tan border */
+    --text: #1A1208;        /* near-black ink */
+    --muted: #7A6E5F;       /* warm brown-gray */
+    --accent: #B8860B;      /* dark gold */
+    --green: #2D6A4F;       /* deep forest green */
+    --red: #8B1A1A;         /* deep crimson */
+    --yellow: #B8860B;      /* gold = same as accent */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* Prevent iOS double-tap zoom everywhere */
+  * { touch-action: manipulation; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Lato', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 60px;
+    /* Subtle paper texture grain */
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
+  }
+
+  h1 {
+    font-family: 'Playfair Display SC', serif;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    color: var(--text);
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .subtitle {
+    color: var(--muted); font-size: 0.9rem; font-weight: 700;
+    text-align: center; margin-bottom: 20px;
+    font-family: 'Lato', sans-serif;
+    letter-spacing: 3px; text-transform: uppercase;
+  }
+
+  .tempo-section, .song-section {
+    width: 100%; max-width: 760px;
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: 4px; padding: 16px 20px; margin-bottom: 16px;
+    box-shadow: 2px 2px 0px var(--border);
+  }
+
+  .section-label {
+    font-family: 'Lato', sans-serif; color: var(--muted);
+    font-size: 0.72rem; letter-spacing: 3px; margin-bottom: 12px;
+    text-transform: uppercase; font-weight: 900;
+    border-bottom: 1px solid var(--border); padding-bottom: 6px;
+  }
+
+  .tempo-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tempo-btn {
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 4px; padding: 8px 16px; cursor: pointer;
+    font-family: 'Lato', sans-serif; font-weight: 700;
+    color: var(--muted); transition: all 0.15s; text-align: center;
+    box-shadow: 1px 1px 0 var(--border);
+  }
+  .tempo-btn:hover { border-color: var(--accent); color: var(--text); background: var(--surface); }
+  .tempo-btn.active { background: var(--text); border-color: var(--text); color: var(--bg); box-shadow: none; }
+  .tempo-btn .t-name { display: block; font-size: 0.95rem; font-weight: 900; letter-spacing: 0.5px; }
+  .tempo-btn .t-bpm { display: block; font-size: 0.68rem; opacity: 0.7; letter-spacing: 1px; }
+  .timesig-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .timesig-btn {
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: 4px; padding: 8px 20px; cursor: pointer;
+    font-family: 'Playfair Display', serif; font-weight: 700; font-size: 1.1rem;
+    color: var(--muted); transition: all 0.15s; text-align: center;
+    box-shadow: 1px 1px 0 var(--border);
+  }
+  .timesig-btn:hover { border-color: var(--text); color: var(--text); }
+  .timesig-btn.active { background: var(--text); border-color: var(--text); color: var(--bg); box-shadow: none; }
+
+  .song-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+  .song-label { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--text); font-weight: 700; letter-spacing: 1px; }
+  .song-label span { color: var(--accent); font-size: 0.8rem; margin-left: 8px; font-family: 'Lato', sans-serif; font-weight: 900; letter-spacing: 1px; }
+  .song-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .btn {
+    padding: 9px 22px; border-radius: 3px; border: 2px solid var(--text); cursor: pointer;
+    font-family: 'Lato', sans-serif; font-weight: 900; font-size: 0.8rem;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+    box-shadow: 2px 2px 0 var(--border);
+  }
+  .btn:hover:not(:disabled) { box-shadow: none; transform: translate(1px,1px); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; box-shadow: 2px 2px 0 var(--border) !important; }
+  .btn-preview { background: var(--surface); color: var(--text); border-color: var(--border); }
+  .btn-perform { background: var(--text); color: var(--bg); border-color: var(--text); font-size: 0.85rem; }
+  .btn-primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+  .btn-green { background: var(--green); color: white; border-color: var(--green); }
+  .btn-red { background: var(--red); color: white; border-color: var(--red); }
+
+  .track { display: flex; flex-wrap: wrap; gap: 8px; min-height: 56px; align-items: center; }
+  .track-empty { color: var(--muted); font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+
+  .track-block {
+    border-radius: 3px; padding: 7px 12px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    min-width: 56px; border: 2px solid var(--border);
+    animation: blockIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
+    cursor: pointer; user-select: none; position: relative; overflow: hidden;
+    transition: outline 0.1s; background: var(--surface);
+    box-shadow: 2px 2px 0 var(--border);
+  }
+  .track-block:hover .remove-hint { opacity: 1; }
+  .remove-hint {
+    position: absolute; inset: 0; background: rgba(200,0,50,0.6);
+    border-radius: inherit; display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; color: white; opacity: 0; transition: opacity 0.15s; font-weight: 800;
+  }
+  .track-block-icon { font-size: 1.15rem; display: flex; align-items: center; justify-content: center; height: 28px; }
+  .track-block-name { font-size: 0.6rem; font-family: 'Lato', sans-serif; font-weight: 900; opacity: 0.7; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  @keyframes blockIn { from{transform:scale(0) rotate(-10deg);opacity:0} to{transform:scale(1) rotate(0);opacity:1} }
+
+  .perf-area {
+    width: 100%; max-width: 760px;
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: 4px; padding: 24px 24px 28px; margin-bottom: 16px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start; text-align: center;
+    box-shadow: 3px 3px 0 var(--border);
+  }
+  #perf-top {
+    width: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 200px;
+  }
+
+  .big-icon { font-size: 3.5rem; margin-bottom: 10px; }
+  .perf-area h2 { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin-bottom: 6px; font-weight: 700; color: var(--text); }
+  .perf-area p { color: var(--muted); font-weight: 600; font-size: 0.9rem; line-height: 1.5; }
+
+  .countdown-num {
+    font-family: 'Playfair Display', serif; font-size: 6rem; color: var(--text); font-weight: 900;
+    animation: countPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+    line-height: 1;
+  }
+  @keyframes countPop { from{transform:scale(1.8);opacity:0} to{transform:scale(1);opacity:1} }
+
+  .metro-bar { display: flex; justify-content: center; gap: 14px; margin: 14px 0; }
+  .metro-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--surface2); border: 2px solid var(--border); transition: all 0.06s;
+  }
+  .metro-dot.beat { background: var(--accent); box-shadow: 0 0 10px rgba(184,134,11,0.5); transform: scale(1.4); border-color: var(--accent); }
+  .metro-dot.beat1 { background: var(--text); box-shadow: 0 0 14px rgba(26,18,8,0.4); border-color: var(--text); transform: scale(1.65); }
+
+  .progress-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0; max-width: 520px; }
+  .prog-dot {
+    width: 30px; height: 30px; border-radius: 3px;
+    background: var(--surface2); border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; transition: all 0.15s;
+  }
+  .prog-dot.done { background: var(--green); border-color: var(--green); color: white; }
+  .prog-dot.current { border-color: var(--text); border-width: 3px; transform: scale(1.2); background: var(--accent); color: white; }
+  .prog-dot.missed { background: var(--red); border-color: var(--red); color: white; }
+
+  .tap-btn {
+    width: 220px; height: 220px; border-radius: 50%;
+    background: var(--text);
+    border: 6px solid var(--text); cursor: pointer; font-family: 'Playfair Display', serif;
+    color: var(--bg); box-shadow: 6px 6px 0 var(--border);
+    transition: transform 0.08s, box-shadow 0.08s;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    user-select: none; -webkit-user-select: none; flex-shrink: 0; margin: 6px 0;
+  }
+  .tap-btn:active, .tap-btn.pressed { transform: translate(3px,3px); box-shadow: 3px 3px 0 var(--border); }
+  .tap-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+  .tap-icon { font-size: 3.5rem; }
+  .tap-hint { font-size: 0.7rem; font-family:'Lato',sans-serif; font-weight:800; opacity:0.8; }
+
+  .result-display { animation: fadeUp 0.4s ease both; }
+  .result-display .result-icon { font-size: 3.8rem; margin-bottom: 8px; }
+  .result-display h2 { font-family:'Playfair Display',serif; font-size:2rem; margin-bottom:6px; }
+  .score-bar-wrap { width: 220px; height: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 2px; margin: 10px auto; overflow: hidden; }
+  .score-bar { height: 100%; border-radius: 20px; transition: width 0.65s cubic-bezier(0.34,1.56,0.64,1); }
+  .result-btns { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+  .cards-section { width: 100%; max-width: 760px; margin-bottom: 16px; }
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
+  .rhythm-card {
+    border-radius: 4px; padding: 16px 10px; text-align: center;
+    cursor: pointer; border: 2px solid var(--border);
+    transition: all 0.15s;
+    background: var(--surface); position: relative;
+    box-shadow: 2px 2px 0 var(--border);
+  }
+  .rhythm-card:hover:not(.disabled) { transform: translate(-1px,-2px); box-shadow: 3px 4px 0 var(--border); border-color: var(--text); }
+  .rhythm-card.disabled { opacity:0.3; cursor:not-allowed; pointer-events:none; }
+  .rhythm-card .card-icon { font-size:1.8rem; margin-bottom:6px; display:flex; align-items:center; justify-content:center; height:34px; color: var(--text); }
+  .rhythm-card .card-name { font-family:'Playfair Display',serif; font-size:0.95rem; display:block; margin-bottom:3px; color: var(--text); font-weight: 700; }
+  .rhythm-card .card-desc { font-size:0.65rem; font-weight:700; color: var(--muted); letter-spacing:0.5px; line-height:1.3; display:block; text-transform: uppercase; }
+
+  .keyboard-hint {
+    position: fixed; bottom:14px; right:14px;
+    background:var(--surface); border:2px solid var(--border);
+    border-radius:3px; padding:7px 13px;
+    font-size:0.72rem; color:var(--muted); font-weight:700;
+    letter-spacing: 0.5px; box-shadow: 2px 2px 0 var(--border);
+  }
+  .keyboard-hint kbd { background:var(--surface2); border:1px solid var(--border); border-radius:2px; padding:2px 6px; font-size:0.72rem; color:var(--text); font-family:'Lato',sans-serif; font-weight:900; }
+  @media(max-width:480px){ .cards-grid{grid-template-columns:repeat(3,1fr)} .tap-btn{width:120px;height:120px} }
+
+  /* ---- CELEBRATION ---- */
+  .celebrate-wrap { width:100%; text-align:center; animation: fadeUp 0.5s ease both; }
+  .celebrate-title {
+    font-family:'Playfair Display SC',serif; font-size:2.8rem; font-weight:700;
+    color: var(--text);
+    letter-spacing: 2px;
+    margin-bottom:6px;
+  }
+  .celebrate-sub { color:var(--muted); font-weight:700; font-size:0.85rem; margin-bottom:20px; letter-spacing: 2px; text-transform: uppercase; }
+  .celebrate-score {
+    font-family:'Playfair Display',serif; font-size:1.3rem;
+    color:var(--accent); margin-bottom:20px; font-weight:700;
+  }
+  .confetti-row { font-size:2rem; letter-spacing:6px; margin-bottom:16px; animation: wiggle 1s ease infinite alternate; }
+  @keyframes wiggle { from{transform:rotate(-3deg)} to{transform:rotate(3deg)} }
+
+    /* ---- PITCH ASSIGNMENT ---- */
+  .pitch-section { width:100%; max-width:760px; background:var(--surface); border:2px solid var(--border); border-radius:4px; padding:24px 20px; margin-bottom:16px; display:none; box-shadow: 3px 3px 0 var(--border); }
+  .pitch-section.visible { display:block; }
+  .pitch-block-row { display:none; }
+
+  /* Step-by-step pitch picker */
+  .pitch-stepper { width:100%; display:flex; flex-direction:column; align-items:center; gap:18px; }
+  .pitch-step-header { text-align:center; }
+  .pitch-step-block-name { font-family:'Playfair Display SC',serif; font-size:1.5rem; font-weight:700; color:var(--text); letter-spacing:1px; }
+  .pitch-step-tap-label { font-family:'Lato',sans-serif; font-size:0.72rem; font-weight:900; color:var(--accent); letter-spacing:2px; text-transform:uppercase; margin-top:4px; }
+  .pitch-step-progress { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; margin-top:4px; }
+  .pitch-step-pip { width:10px; height:10px; border-radius:50%; border:2px solid var(--border); background:var(--surface2); transition:all 0.2s; }
+  .pitch-step-pip.done { background:var(--text); border-color:var(--text); }
+  .pitch-step-pip.current { background:var(--accent); border-color:var(--accent); transform:scale(1.3); }
+
+  /* Mini piano keyboard */
+  .mini-piano { display:flex; gap:4px; position:relative; }
+  .piano-key {
+    width:54px; height:110px; border:2px solid var(--text); border-radius:0 0 5px 5px;
+    background:var(--surface); cursor:pointer; display:flex; align-items:flex-end;
+    justify-content:center; padding-bottom:10px; position:relative;
+    font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:700; color:var(--muted);
+    transition:all 0.1s; box-shadow: 3px 5px 0 var(--border);
+  }
+  .piano-key:hover { background:var(--surface2); color:var(--text); transform:translateY(2px); box-shadow:3px 3px 0 var(--border); }
+  .piano-key.selected { background:var(--text); color:var(--bg); transform:translateY(3px); box-shadow:2px 2px 0 var(--border); }
+  .piano-key:active { transform:translateY(4px); box-shadow:1px 1px 0 var(--border); }
+
+  .pitch-selected-note { font-family:'Playfair Display SC',serif; font-size:3rem; font-weight:700; color:var(--text); min-height:3.5rem; text-align:center; }
+  .pitch-step-nav { display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:center; }
+  .pitch-nav-btn {
+    padding:10px 24px; border-radius:3px; border:2px solid var(--border);
+    background:var(--surface); color:var(--text); cursor:pointer;
+    font-family:'Lato',sans-serif; font-weight:900; font-size:0.8rem;
+    letter-spacing:1.5px; text-transform:uppercase;
+    box-shadow:2px 2px 0 var(--border); transition:all 0.12s;
+  }
+  .pitch-nav-btn:hover:not(:disabled) { box-shadow:none; transform:translate(1px,1px); }
+  .pitch-nav-btn:disabled { opacity:0.3; cursor:not-allowed; transform:none !important; }
+  .pitch-nav-btn.primary { background:var(--text); color:var(--bg); border-color:var(--text); }
+
+  .pitch-play-btn {
+    background: var(--text); color: var(--bg); border: 2px solid var(--text);
+    border-radius:3px; padding:10px 28px; font-family:'Lato',sans-serif; font-weight:900;
+    font-size:0.8rem; letter-spacing:2px; text-transform:uppercase;
+    cursor:pointer; transition:all 0.15s; display:flex; align-items:center; gap:8px;
+    box-shadow: 2px 2px 0 var(--border);
+  }
+  .pitch-play-btn:hover { box-shadow:none; transform:translate(1px,1px); }
+  .pitch-play-btn:disabled { opacity:0.35; cursor:not-allowed; transform:none; box-shadow:2px 2px 0 var(--border); }
+
+/* ---- CHORD SECTION ---- */
+  .chord-palette {
+    display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom:14px;
+  }
+  .chord-pal-btn {
+    width:52px; height:52px; border-radius:3px;
+    border:2px solid var(--border); background:var(--surface);
+    color:var(--text); font-family:'Playfair Display',serif; font-size:1.3rem; font-weight:700;
+    cursor:pointer; transition:all 0.12s; display:flex; align-items:center; justify-content:center;
+    box-shadow: 2px 2px 0 var(--border);
+  }
+  .chord-pal-btn:hover { border-color:var(--text); transform:translate(-1px,-1px); box-shadow: 3px 3px 0 var(--border); }
+  .chord-pal-btn.active {
+    background:var(--text); border-color:var(--text); color:var(--bg);
+    box-shadow:none; transform:translate(1px,1px);
+  }
+  .chord-hint-bar {
+    text-align:center; font-size:0.83rem; font-weight:700; color:var(--muted);
+    margin-bottom:14px; min-height:1.2em;
+  }
+  .chord-lane {
+    display:flex; gap:6px; flex-wrap:wrap; justify-content:center;
+    user-select:none; -webkit-user-select:none; touch-action:none;
+  }
+  .chord-lane-block {
+    border-radius:3px; padding:10px 8px; min-width:76px;
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    border:2px solid var(--border); cursor:crosshair;
+    background:var(--surface); transition:outline 0.06s, background 0.1s, transform 0.1s;
+    box-shadow: 2px 2px 0 var(--border);
+  }
+  .chord-lane-block.drag-hi { outline:3px solid var(--text); transform:scale(1.06); box-shadow:none; }
+  .clb-rhythm-icon { font-size:1.05rem; display:flex; align-items:center; justify-content:center; height:24px; }
+  .clb-rhythm-name { font-size:0.62rem; font-weight:700; font-family:'Lato',sans-serif; opacity:0.65; }
+  .clb-chord-name {
+    font-family:'Playfair Display',serif; font-size:1.35rem; min-height:1.6rem;
+    display:flex; align-items:center; justify-content:center;
+    transition:all 0.15s;
+  }
+  .clb-chord-name.set { color:var(--text); font-weight:700; }
+  .clb-chord-name.unset { color:var(--border); font-size:0.9rem; }
+  /* ---- NOTATION SECTION ---- */
+  #notation-section {
+    width:100%; max-width:760px;
+    background:#FDFAF5; border:2px solid var(--border); border-radius:4px;
+    padding:20px; margin-bottom:16px; display:none;
+    box-shadow: 3px 3px 0 var(--border);
+  }
+  #notation-canvas svg * {
+    fill: black !important;
+    stroke: black !important;
+  }
+  #notation-canvas svg .abcjs-note_selected,
+  #notation-canvas svg text {
+    fill: black !important;
+  }
+  .notation-hdr {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:14px; flex-wrap:wrap; gap:8px;
+  }
+  .notation-hdr-title {
+    font-family:'Playfair Display',serif; color:#333;
+    font-size:1rem; letter-spacing:0.5px;
+  }
+  #notation-canvas { overflow-x:auto; min-height:180px; }
+  #notation-canvas svg { display:block; }
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/abcjs/6.2.2/abcjs-basic-min.js"></script>
+</head>
+<body>
+
+<h1>🎵 Song Builder</h1>
+<p class="subtitle">Choose Tempo &nbsp;·&nbsp; Build Your Song &nbsp;·&nbsp; Perform It</p>
+
+<div class="tempo-section">
+  <div class="section-label">TEMPO MARKING</div>
+  <div class="tempo-buttons" id="tempo-buttons"></div>
+  <div class="section-label" style="margin-top:16px">TIME SIGNATURE</div>
+  <div class="timesig-buttons" id="timesig-buttons"></div>
+</div>
+
+<div class="cards-section">
+  <div class="section-label" style="margin-bottom:10px">RHYTHM CARDS — click to preview &amp; add to song</div>
+  <div class="cards-grid" id="cards-grid"></div>
+</div>
+
+
+<div class="song-section">
+  <div class="song-header">
+    <div class="song-label">My Song <span id="block-count">0 / 8 blocks</span></div>
+    <div class="song-actions">
+      <button class="btn btn-preview" id="preview-btn" disabled onclick="previewSong()">▶ Preview</button>
+      <button class="btn btn-perform" id="perform-btn" disabled onclick="startPerformance()">🎤 Perform!</button>
+    </div>
+  </div>
+  <div class="track" id="track">
+    <span class="track-empty">Pick rhythm cards below to build your song…</span>
+  </div>
+</div>
+
+<div class="perf-area" id="perf-area">
+  <div class="big-icon">🎼</div>
+  <h2>Build Your Song First!</h2>
+  <p>Click rhythm cards below to add blocks.<br>When you're ready, hit <strong>Perform!</strong> to play it with the metronome.</p>
+</div>
+
+<div class="pitch-section" id="pitch-section">
+  <div class="section-label" style="margin-bottom:16px">ADD A PITCH TO EACH NOTE</div>
+  <div id="pitch-stepper-wrap"></div>
+  <div class="pitch-block-row" id="pitch-block-row" style="display:none"></div>
+</div>
+
+
+<div class="pitch-section" id="chord-section">
+  <div class="section-label" style="margin-bottom:14px">🎸 ADD CHORDS — pick a chord, then drag across blocks</div>
+  <div class="chord-palette" id="chord-palette"></div>
+  <div class="chord-hint-bar" id="chord-hint-bar">👆 Select a chord above to get started</div>
+  <div class="chord-lane" id="chord-lane"></div>
+  <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap">
+    <button class="pitch-play-btn" id="chord-play-btn" onclick="playChordSong()" disabled>▶ Play With Chords</button>
+    <button class="btn btn-green" id="show-notation-btn" onclick="showNotation()" disabled style="font-size:1rem;padding:10px 24px">🎼 See My Music!</button>
+    <button class="btn btn-secondary" onclick="skipChords()">Skip Chords →</button>
+  </div>
+</div>
+  <div class="chord-palette" id="chord-palette"></div>
+  <div class="chord-hint" id="chord-hint">👆 Pick a chord above, then click or drag across blocks below</div>
+  <div class="chord-lane" id="chord-lane"></div>
+  <div style="display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap">
+    <button class="pitch-play-btn" id="chord-play-btn" onclick="playChordSong()" disabled>▶ Play With Chords</button>
+    <button class="btn btn-green" id="show-notation-btn" onclick="showNotation()" disabled style="font-size:1rem;padding:10px 24px">🎼 See My Music!</button>
+    <button class="btn btn-secondary" onclick="skipChords()">Skip Chords →</button>
+  </div>
+</div>
+
+<div id="notation-section">
+  <div class="notation-hdr">
+    <div class="notation-hdr-title">🎵 MY SONG — FULL NOTATION</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="pitch-play-btn" onclick="playMelodyWithChords()" style="padding:8px 18px;font-size:0.85rem">▶ Play</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('notation-section').style.display='none'" style="padding:8px 14px;font-size:0.85rem">✕ Close</button>
+      <button class="btn btn-red" onclick="newSong()" style="padding:8px 14px;font-size:0.85rem">🗑 New Song</button>
+    </div>
+  </div>
+  <div id="notation-canvas"></div>
+</div>
+
+
+<div class="keyboard-hint"><kbd>Space</kbd> to tap during performance</div>
+
+<script>
+// ===== AUDIO =====
+let audioCtx;
+function getCtx(){ if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)(); return audioCtx; }
+function playBeep(freq=660,dur=0.09,vol=0.45,when=0){
+  const ctx=getCtx(), osc=ctx.createOscillator(), gain=ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.frequency.value=freq; osc.type='sine';
+  const t=when||ctx.currentTime;
+  gain.gain.setValueAtTime(vol,t); gain.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  osc.start(t); osc.stop(t+dur+0.01);
+}
+function playTick(accent=false){
+  const ctx=getCtx(), sz=Math.floor(ctx.sampleRate*0.025);
+  const buf=ctx.createBuffer(1,sz,ctx.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<sz;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/sz,10);
+  const src=ctx.createBufferSource(), gain=ctx.createGain();
+  src.buffer=buf; src.connect(gain); gain.connect(ctx.destination);
+  gain.gain.value=accent?0.85:0.45; src.start();
+  playBeep(accent?1200:800,0.03,accent?0.35:0.18);
+}
+
+// ===== TEMPOS =====
+const TEMPOS=[
+  {name:'Largo',    bpm:48,  label:'♩= 48'},
+  {name:'Andante',  bpm:76,  label:'♩= 76'},
+  {name:'Moderato', bpm:96,  label:'♩= 96'},
+  {name:'Allegretto',bpm:112,label:'♩= 112'},
+  {name:'Allegro',  bpm:132, label:'♩= 132'},
+  {name:'Presto',   bpm:168, label:'♩= 168'},
+];
+let tempoIdx=2;
+function BEAT(){ return 60000/TEMPOS[tempoIdx].bpm; }
+
+// ===== TIME SIGNATURES =====
+const TIME_SIGS = [
+  { label:'2/4', beats:2, symbol:'2/4' },
+  { label:'3/4', beats:3, symbol:'3/4' },
+  { label:'4/4', beats:4, symbol:'4/4' },
+  { label:'6/8', beats:6, symbol:'6/8', beatUnit:8 },
+];
+let timeSigIdx = 2; // default 4/4
+const MEASURES = 2; // always 2 measures
+
+function beatsPerMeasure(){ return TIME_SIGS[timeSigIdx].beats; }
+function maxBeats(){ return beatsPerMeasure() * MEASURES; }
+
+// Compute MAX blocks dynamically based on time sig
+// (generous — user can always fill partial measure)
+function getMAX(){
+  // Each block is at least 0.5 beats, so max possible blocks = maxBeats * 2
+  // but cap at 16 for usability
+  return Math.min(maxBeats() * 2, 16);
+}
+
+function renderTimeSigs(){
+  const el = document.getElementById('timesig-buttons');
+  if (!el) return;
+  el.innerHTML = '';
+  TIME_SIGS.forEach((ts, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'timesig-btn' + (i===timeSigIdx?' active':'');
+    btn.textContent = ts.label;
+    btn.onclick = () => {
+      timeSigIdx = i;
+      renderTimeSigs();
+      renderCards();
+      updateBlockCount();
+    };
+    el.appendChild(btn);
+  });
+}
+
+// ===== CARD DEFINITIONS =====
+function getCards(){
+  const B=BEAT();
+  return [
+    { id:'ta', name:'Ta', desc:'1 quarter note',
+      icon:'<svg width="18" height="32" viewBox="0 0 18 32"><ellipse cx="8" cy="26" rx="7" ry="5" fill="currentColor" transform="rotate(-20 8 26)"/><line x1="14.5" y1="23" x2="14.5" y2="4" stroke="currentColor" stroke-width="2.2"/></svg>',
+      taps:[0], totalMs:B, color:'#ff6b6b', freq:660 },
+    { id:'titi', name:'Ti-Ti', desc:'2 eighth notes',
+      icon:'<svg width="34" height="32" viewBox="0 0 34 32"><ellipse cx="7" cy="26" rx="6" ry="4.5" fill="currentColor" transform="rotate(-20 7 26)"/><line x1="12.5" y1="23.5" x2="12.5" y2="5" stroke="currentColor" stroke-width="2"/><ellipse cx="24" cy="26" rx="6" ry="4.5" fill="currentColor" transform="rotate(-20 24 26)"/><line x1="29.5" y1="23.5" x2="29.5" y2="5" stroke="currentColor" stroke-width="2"/><line x1="12.5" y1="5" x2="29.5" y2="8" stroke="currentColor" stroke-width="2.5"/></svg>',
+      taps:[0,B/2], totalMs:B, color:'#4ecdc4', freq:880 },
+    { id:'taa', name:'Ta-a', desc:'1 half note (2 beats)',
+      icon:'<svg width="20" height="34" viewBox="0 0 20 34"><ellipse cx="8" cy="27" rx="7.5" ry="5" fill="none" stroke="currentColor" stroke-width="2.3" transform="rotate(-20 8 27)"/><line x1="15" y1="24" x2="15" y2="4" stroke="currentColor" stroke-width="2.2"/></svg>',
+      taps:[0], totalMs:B*2, color:'#a29bfe', freq:550 },
+    { id:'tatata', name:'Ta Ta Ta', desc:'3 quarter notes',
+      icon:'<svg width="52" height="32" viewBox="0 0 52 32"><ellipse cx="7" cy="26" rx="6" ry="4.5" fill="currentColor" transform="rotate(-20 7 26)"/><line x1="12.5" y1="23.5" x2="12.5" y2="5" stroke="currentColor" stroke-width="2"/><ellipse cx="26" cy="26" rx="6" ry="4.5" fill="currentColor" transform="rotate(-20 26 26)"/><line x1="31.5" y1="23.5" x2="31.5" y2="5" stroke="currentColor" stroke-width="2"/><ellipse cx="45" cy="26" rx="6" ry="4.5" fill="currentColor" transform="rotate(-20 45 26)"/><line x1="50.5" y1="23.5" x2="50.5" y2="5" stroke="currentColor" stroke-width="2"/></svg>',
+      taps:[0,B,B*2], totalMs:B*3, color:'#fdcb6e', freq:660 },
+    { id:'taaaa', name:'Ta-a-a-a', desc:'1 whole note (4 beats)',
+      icon:'<svg width="28" height="22" viewBox="0 0 28 22"><ellipse cx="14" cy="13" rx="12" ry="7.5" fill="none" stroke="currentColor" stroke-width="2.5" transform="rotate(-15 14 13)"/></svg>',
+      taps:[0], totalMs:B*4, color:'#6bcb77', freq:440 },
+
+  ];
+}
+
+// ===== STATE =====
+// MAX is now dynamic — use getMAX()
+let songBlocks=[];
+let perfState='idle';
+let perfTimers=[];
+let tapLog=[];
+let perfStartTime=null;
+let beatSchedule=[];
+
+// ===== RENDER TEMPOS =====
+function renderTempos(){
+  const el=document.getElementById('tempo-buttons');
+  el.innerHTML='';
+  TEMPOS.forEach((t,i)=>{
+    const btn=document.createElement('button');
+    btn.className='tempo-btn'+(i===tempoIdx?' active':'');
+    btn.innerHTML=`<span class="t-name">${t.name}</span><span class="t-bpm">${t.label}</span>`;
+    btn.onclick=()=>{ tempoIdx=i; renderTempos(); renderCards(); };
+    el.appendChild(btn);
+  });
+}
+
+// ===== RENDER CARDS =====
+function renderCards(){
+  const cards=getCards();
+  const grid=document.getElementById('cards-grid');
+  grid.innerHTML='';
+  const _usedB=songBlocks.reduce((s,bid)=>{const c=getCards().find(x=>x.id===bid);return s+(c?getCardBeatInfo(c.id).total:1);},0);
+  const off=perfState!=='idle'||_usedB>=maxBeats();
+  cards.forEach(card=>{
+    const el=document.createElement('div');
+    el.className='rhythm-card'+(off?' disabled':'');
+    el.style.color=card.color;
+    el.innerHTML=`<div class="card-icon">${card.icon}</div><span class="card-name">${card.name}</span><span class="card-desc">${card.desc}</span>`;
+    el.onclick=()=>addCard(card.id);
+    grid.appendChild(el);
+  });
+}
+
+// ===== TRACK =====
+function addCard(id){
+  const _ub=songBlocks.reduce((s,bid)=>{const c=getCards().find(x=>x.id===bid);return s+(c?getCardBeatInfo(c.id).total:1);},0);
+  if(perfState!=='idle'||_ub>=maxBeats()) return;
+  const card=getCards().find(c=>c.id===id);
+  if(!card) return;
+  // Preview sound
+  card.taps.forEach(t=>setTimeout(()=>playBeep(card.freq,0.1,0.45),t));
+  songBlocks.push(id);
+  renderTrack(); renderCards(); updateBlockCount();
+  const usedBeats2 = songBlocks.reduce((s,bid)=>{
+    const c=getCards().find(x=>x.id===bid);
+    return s+(c?getCardBeatInfo(c.id).total:1);
+  },0);
+  if(usedBeats2 >= maxBeats()) setPerfMsg('🎶','Song Complete!','Hit <strong>Perform!</strong> to play it with the metronome.');
+}
+
+function removeBlock(idx){
+  if(perfState!=='idle') return;
+  songBlocks.splice(idx,1);
+  renderTrack(); renderCards();
+  updateBlockCount();
+  if(songBlocks.length===0) setPerfMsg('🎼','Build Your Song First!','Click rhythm cards below to add blocks. When ready, hit <strong>Perform!</strong>');
+}
+
+function renderTrack(){
+  const cards=getCards();
+  const track=document.getElementById('track');
+  if(songBlocks.length===0){ track.innerHTML='<span class="track-empty">Pick rhythm cards below to build your song…</span>'; return; }
+  track.innerHTML='';
+  songBlocks.forEach((id,idx)=>{
+    const card=cards.find(c=>c.id===id);
+    if(!card) return;
+    const block=document.createElement('div');
+    block.className='track-block';
+    block.id='blk-'+idx;
+    block.style.background=card.color+'28';
+    block.style.borderColor=card.color+'66';
+    block.style.color=card.color;
+    block.title='Click to remove';
+    block.innerHTML=`<div class="remove-hint">✕</div><div class="track-block-icon">${card.icon}</div><div class="track-block-name">${card.name}</div>`;
+    block.onclick=()=>removeBlock(idx);
+    track.appendChild(block);
+  });
+}
+
+// ===== PREVIEW =====
+function previewSong(){
+  if(!songBlocks.length) return;
+  const cards=getCards();
+  let ms=0;
+  songBlocks.forEach((id,bi)=>{
+    const card=cards.find(c=>c.id===id);
+    if(!card) return;
+    card.taps.forEach(t=>setTimeout(()=>playBeep(card.freq,0.11,0.45),ms+t));
+    const d=ms; setTimeout(()=>{ const b=document.getElementById('blk-'+bi); if(b){b.style.outline='3px solid white'; setTimeout(()=>b.style.outline='',260);} },d);
+    ms+=card.totalMs;
+  });
+}
+
+// ===== BUILD SCHEDULE =====
+function buildSchedule(){
+  const cards=getCards();
+  beatSchedule=[];
+  let ms=0;
+  songBlocks.forEach((id,bi)=>{
+    const card=cards.find(c=>c.id===id);
+    if(!card) return;
+    card.taps.forEach((t,ti)=>beatSchedule.push({blockIdx:bi,tapIdx:ti,absoluteMs:ms+t}));
+    ms+=card.totalMs;
+  });
+  return ms;
+}
+
+// ===== PERFORMANCE =====
+function startPerformance(){
+  if(!songBlocks.length) return;
+  perfState='countdown';
+  perfTimers=[]; tapLog=[];
+  renderCards();
+  document.getElementById('preview-btn').disabled=true;
+  document.getElementById('perform-btn').disabled=true;
+
+  const B=BEAT();
+  const tempoName=TEMPOS[tempoIdx].name;
+  let beat=0;
+
+  const area=document.getElementById('perf-area');
+  area.innerHTML=`
+    <div id="perf-top" style="width:100%;display:flex;flex-direction:column;align-items:center;">
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--muted);margin-bottom:10px">Get ready… ${tempoName}!</div>
+      <div class="countdown-num" id="cnum">4</div>
+      <div class="metro-bar" id="mbar">${[0,1,2,3].map(i=>`<div class="metro-dot" id="md${i}"></div>`).join('')}</div>
+      <div style="color:var(--muted);font-weight:700;font-size:0.85rem;margin-top:6px;margin-bottom:12px">4-beat count-in…</div>
+    </div>
+    <button class="tap-btn" id="tapbtn" style="opacity:0.4;" disabled onclick="doTap()">
+      <span class="tap-icon">👏</span>
+      <span style="font-size:1.3rem">TAP!</span>
+      <span class="tap-hint">or press Space</span>
+    </button>
+  `;
+
+  function tickDot(b){
+    document.querySelectorAll('.metro-dot').forEach((d,i)=>{
+      d.classList.remove('beat','beat1');
+      if(i===b%4) d.classList.add(b%4===0?'beat1':'beat');
+    });
+    playTick(b%4===0);
+  }
+
+  function countStep(){
+    tickDot(beat);
+    const num=document.getElementById('cnum');
+    if(num){ num.textContent=4-beat; num.style.animation='none'; void num.offsetWidth; num.style.animation='countPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both'; }
+    beat++;
+    if(beat<4) perfTimers.push(setTimeout(countStep,B));
+    else perfTimers.push(setTimeout(beginTapping,B));
+  }
+  countStep();
+}
+
+function beginTapping(){
+  perfState='performing';
+  tapLog=[]; perfStartTime=Date.now();
+  const B=BEAT();
+  const cards=getCards();
+  const totalMs=buildSchedule();
+
+  // Only swap the top section — tap button stays exactly where it is
+  const progHtml=songBlocks.map((id,i)=>{
+    const card=cards.find(c=>c.id===id);
+    return `<div class="prog-dot${i===0?' current':''}" id="pd${i}">${card&&!card.icon.startsWith('<')?card.icon:'♪'}</div>`;
+  }).join('');
+
+  document.getElementById('perf-top').innerHTML=`
+    <div style="font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--yellow);margin-bottom:6px">🥁 Tap Along!</div>
+    <div class="metro-bar" id="mbar">${[0,1,2,3].map(i=>`<div class="metro-dot" id="md${i}"></div>`).join('')}</div>
+    <div class="progress-row" style="margin-bottom:12px">${progHtml}</div>
+  `;
+
+  // Activate the button that's already on screen
+  const btn=document.getElementById('tapbtn');
+  btn.style.opacity='1';
+  btn.disabled=false;
+
+  // Run metronome
+  let mc=0;
+  function metro(){
+    document.querySelectorAll('.metro-dot').forEach((d,i)=>{ d.classList.remove('beat','beat1'); if(i===mc%4) d.classList.add(mc%4===0?'beat1':'beat'); });
+    playTick(mc%4===0);
+    mc++;
+    perfTimers.push(setTimeout(metro,B));
+  }
+  metro();
+
+  // Highlight blocks in progress
+  let lastBi=-1;
+  beatSchedule.forEach(entry=>{
+    perfTimers.push(setTimeout(()=>{
+      if(entry.blockIdx!==lastBi){
+        lastBi=entry.blockIdx;
+        document.querySelectorAll('.prog-dot').forEach((d,i)=>{
+          d.classList.remove('current');
+          if(i<entry.blockIdx) d.classList.add('done');
+          if(i===entry.blockIdx) d.classList.add('current');
+        });
+        document.querySelectorAll('.track-block').forEach((b,i)=>{ b.style.outline=i===entry.blockIdx?'3px solid white':''; });
+      }
+    },entry.absoluteMs));
+  });
+
+  // Auto-end
+  perfTimers.push(setTimeout(()=>{ if(perfState==='performing') finishPerf(); },totalMs+B*2));
+}
+
+function doTap(){
+  if(perfState!=='performing') return;
+  tapLog.push(Date.now()-perfStartTime);
+  playBeep(880,0.055,0.28);
+  const btn=document.getElementById('tapbtn');
+  if(btn){ btn.classList.add('pressed'); setTimeout(()=>btn.classList.remove('pressed'),100); }
+}
+
+document.addEventListener('keydown',e=>{ if(e.code==='Space'){e.preventDefault(); doTap();} });
+
+// ===== SCORE =====
+function finishPerf(){
+  perfState='result';
+  perfTimers.forEach(clearTimeout); perfTimers=[];
+  document.querySelectorAll('.track-block').forEach(b=>b.style.outline='');
+
+  const TOL=Math.max(280, BEAT()*0.38);
+  const expected=beatSchedule.map(e=>e.absoluteMs);
+  const actual=tapLog;
+  let score=0;
+
+  if(expected.length>0 && actual.length>0){
+    let matched=0; const used=new Set();
+    for(const exp of expected){
+      let best=Infinity, bIdx=-1;
+      actual.forEach((a,i)=>{ if(!used.has(i)&&Math.abs(a-exp)<best){best=Math.abs(a-exp);bIdx=i;} });
+      if(bIdx>=0&&best<=TOL){matched++;used.add(bIdx);}
+    }
+    const extra=Math.max(0,actual.length-matched);
+    score=Math.max(0,Math.min(100,Math.round(matched/expected.length*100)-extra*10));
+  }
+
+  const passed = score >= 65;
+  if (passed) {
+    showCelebration(score);
+  } else {
+    // Not quite there — show a keep-trying screen
+    const barColor = score >= 50 ? 'var(--yellow)' : 'var(--red)';
+    document.getElementById('perf-area').innerHTML = `
+      <div id="perf-top" style="min-height:0;padding:10px 0;width:100%">
+        <div class="result-display">
+          <div class="result-icon">😅</div>
+          <h2 style="color:var(--red)">Keep Practicing!</h2>
+          <div style="color:var(--muted);font-weight:700;font-size:0.9rem">Accuracy: ${score}%</div>
+          <div class="score-bar-wrap"><div class="score-bar" id="sbar" style="width:0%;background:${barColor}"></div></div>
+          <div style="color:var(--muted);font-size:0.85rem;font-weight:600;margin:10px 0">You need 65% or better to move on.</div>
+          <div class="result-btns">
+            <button class="btn btn-primary" onclick="retryPerf()">🔄 Try Again</button>
+            <button class="btn btn-secondary" onclick="backToEdit()">✏️ Edit Song</button>
+            <button class="btn btn-red" onclick="newSong()">🗑 New Song</button>
+          </div>
+        </div>
+      </div>
+    `;
+    setTimeout(()=>{ const b=document.getElementById('sbar'); if(b) b.style.width=score+'%'; },100);
+    setTimeout(()=>playBeep(220,0.18,0.3),80);
+  }
+}
+
+function retryPerf(){ perfState='idle'; startPerformance(); }
+
+function backToEdit(){
+  perfState='idle'; perfTimers.forEach(clearTimeout); perfTimers=[];
+  document.querySelectorAll('.track-block').forEach(b=>b.style.outline='');
+  document.getElementById('preview-btn').disabled=songBlocks.length===0;
+  document.getElementById('perform-btn').disabled=songBlocks.length===0;
+  setPerfMsg('🎼','Ready to Perform!','Edit your song or hit <strong>Perform!</strong> whenever you\'re ready.');
+  renderCards();
+}
+
+function newSong(){
+  perfTimers.forEach(clearTimeout); perfTimers=[]; songBlocks=[]; perfState='idle'; tapLog=[];
+  document.getElementById('block-count').textContent='0 beats';
+  document.getElementById('preview-btn').disabled=true;
+  document.getElementById('perform-btn').disabled=true;
+  renderTrack(); renderCards();
+  setPerfMsg('🎼','Build Your Song First!','Click rhythm cards below to add blocks. When ready, hit <strong>Perform!</strong>');
+}
+
+function setPerfMsg(icon,title,body){
+  document.getElementById('perf-area').innerHTML=`<div id="perf-top" style="min-height:0;padding:20px 0"><div class="big-icon">${icon}</div><h2>${title}</h2><p>${body}</p></div>`;
+}
+
+
+// ===== NOTES =====
+const NOTE_NAMES = ['C','D','E','F','G','A','B'];
+const NOTE_FREQS = { C:261.63, D:293.66, E:329.63, F:349.23, G:392.00, A:440.00, B:493.88 };
+let songPitches = []; // one note name per block, null if unset
+
+function playPianoNote(freq, dur=0.5, vol=0.45) {
+  // Additive synthesis piano: fundamental + harmonics with piano-like envelope
+  const ctx = getCtx();
+  const master = ctx.createGain();
+  master.connect(ctx.destination);
+  const t = ctx.currentTime;
+
+  // Partials: [frequency multiplier, relative volume, decay speed]
+  const partials = [
+    [1,    0.60, 3.5],   // fundamental — strong, medium decay
+    [2,    0.20, 5.0],   // 2nd harmonic — quick decay
+    [3,    0.12, 6.0],   // 3rd harmonic — faster decay
+    [4,    0.06, 8.0],   // 4th harmonic — very fast
+    [5.1,  0.04, 10.0],  // slight inharmonicity like real piano strings
+    [6,    0.02, 12.0],
+  ];
+
+  partials.forEach(([mult, amp, decay]) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.connect(g); g.connect(master);
+    osc.type = 'sine';
+    osc.frequency.value = freq * mult;
+    // Sharp attack, then exponential decay (piano-like)
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol * amp, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(vol * amp * 0.3, t + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + Math.min(dur * decay * 0.15, dur + 0.5));
+    osc.start(t);
+    osc.stop(t + Math.min(dur * decay * 0.15, dur + 0.8));
+  });
+
+  // Overall envelope
+  master.gain.setValueAtTime(1, t);
+  master.gain.setValueAtTime(1, t + dur - 0.05);
+  master.gain.linearRampToValueAtTime(0, t + dur + 0.05);
+}
+
+function playNote(noteName, dur=0.4, vol=0.45, octaveMult=1) {
+  const freq = NOTE_FREQS[noteName] * octaveMult;
+  playPianoNote(freq, dur, vol);
+}
+
+function showCelebration(score) {
+  const area = document.getElementById('perf-area');
+  const msg = score >= 90 ? 'Perfect!' : score >= 80 ? 'Excellent!' : 'Nice Job!';
+  area.innerHTML = `
+    <div id="perf-top" style="min-height:0;padding:10px 0;width:100%">
+      <div class="celebrate-wrap">
+        <div class="confetti-row">🎉🎊🎵🎶🎊🎉</div>
+        <div class="celebrate-title">${msg}</div>
+        <div class="celebrate-score">Accuracy: ${score}%</div>
+        <div class="celebrate-sub">You performed your song with the metronome!</div>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-green" style="font-size:1rem;padding:12px 28px;" onclick="startAddPitches()">🎼 Add Pitches!</button>
+          <button class="btn btn-primary" onclick="retryPerf()">🔄 Try Again</button>
+          <button class="btn btn-secondary" onclick="backToEdit()">✏️ Edit Song</button>
+          <button class="btn btn-red" onclick="newSong()">🗑 New Song</button>
+        </div>
+      </div>
+    </div>
+  `;
+  // Play a little piano fanfare
+  setTimeout(()=>playPianoNote(523,0.3,0.4),80);
+  setTimeout(()=>playPianoNote(659,0.3,0.4),200);
+  setTimeout(()=>playPianoNote(784,0.3,0.4),320);
+  setTimeout(()=>playPianoNote(1047,0.5,0.45),440);
+}
+
+function startAddPitches() {
+  const cards = getCards();
+  songPitches = songBlocks.map((id) => {
+    const card = cards.find(c=>c.id===id);
+    return card ? card.taps.map(()=>null) : [null];
+  });
+
+  // Build a flat list of {blockIdx, tapIdx} steps
+  window._pitchSteps = [];
+  songBlocks.forEach((id, bi) => {
+    const card = cards.find(c=>c.id===id);
+    if (!card) return;
+    card.taps.forEach((_, ti) => window._pitchSteps.push({bi, ti, card}));
+  });
+  window._pitchStepIdx = 0;
+
+  document.getElementById('pitch-section').classList.add('visible');
+  renderPitchStep();
+  document.getElementById('pitch-section').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function renderPitchStep() {
+  const steps = window._pitchSteps;
+  const si = window._pitchStepIdx;
+  const section = document.getElementById('pitch-section');
+
+  if (si >= steps.length) {
+    // All done — show play/done buttons
+    section.querySelector('#pitch-stepper-wrap').innerHTML = `
+      <div class="pitch-stepper" style="padding:20px 0">
+        <div class="pitch-step-block-name">All Notes Set!</div>
+        <div class="pitch-step-tap-label">Your melody is ready</div>
+        <div class="pitch-step-nav" style="margin-top:8px">
+          <button class="pitch-play-btn" onclick="playMelody()">▶ Play Melody</button>
+          <button class="pitch-nav-btn" onclick="window._pitchStepIdx=0;renderPitchStep()">← Edit Notes</button>
+          <button class="pitch-nav-btn primary" onclick="finishMelody()">Next: Add Chords →</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const {bi, ti, card} = steps[si];
+  const totalSteps = steps.length;
+  const currentNote = songPitches[bi] && songPitches[bi][ti];
+
+  // Progress pips
+  const pips = steps.map((_, i) => {
+    const cls = i < si ? 'done' : i === si ? 'current' : '';
+    return `<div class="pitch-step-pip ${cls}"></div>`;
+  }).join('');
+
+  // Block name label
+  const tapLabel = card.taps.length > 1
+    ? `Note ${ti+1} of ${card.taps.length} in <em>${card.name}</em>`
+    : `<em>${card.name}</em>`;
+
+  // Piano keys C D E F G A B
+  const keys = ['C','D','E','F','G','A','B'];
+  const pianoKeys = keys.map(n => {
+    const sel = currentNote === n ? ' selected' : '';
+    return `<button class="piano-key${sel}" onclick="selectNotePiano(${bi},${ti},'${n}')">${n}</button>`;
+  }).join('');
+
+  const stepLabel = `Step ${si+1} of ${totalSteps}`;
+  const selectedDisplay = currentNote
+    ? `<div class="pitch-selected-note">${currentNote}</div>`
+    : `<div class="pitch-selected-note" style="color:var(--border)">—</div>`;
+
+  section.querySelector('#pitch-stepper-wrap').innerHTML = `
+    <div class="pitch-stepper">
+      <div class="pitch-step-progress">${pips}</div>
+      <div class="pitch-step-header">
+        <div class="pitch-step-block-name">${tapLabel}</div>
+        <div class="pitch-step-tap-label">${stepLabel}</div>
+      </div>
+      ${selectedDisplay}
+      <div class="mini-piano">${pianoKeys}</div>
+      <div class="pitch-step-nav">
+        <button class="pitch-nav-btn" onclick="pitchStepBack()" ${si===0?'disabled':''}>← Back</button>
+        <button class="pitch-nav-btn primary" id="pitch-next-btn"
+          onclick="pitchStepNext()"
+          ${currentNote?'':'disabled'}>
+          ${si===totalSteps-1?'Done ✓':'Next →'}
+        </button>
+      </div>
+    </div>`;
+}
+
+function selectNotePiano(bi, ti, noteName) {
+  songPitches[bi][ti] = noteName;
+  playNote(noteName, 0.5, 0.5, 2);
+  // Update piano key display
+  document.querySelectorAll('.piano-key').forEach(k => {
+    k.classList.toggle('selected', k.textContent.trim() === noteName);
+  });
+  // Update selected note display
+  const disp = document.querySelector('.pitch-selected-note');
+  if (disp) { disp.textContent = noteName; disp.style.color = 'var(--text)'; }
+  // Enable next button
+  const nb = document.getElementById('pitch-next-btn');
+  if (nb) nb.disabled = false;
+}
+
+function pitchStepNext() {
+  window._pitchStepIdx++;
+  renderPitchStep();
+}
+
+function pitchStepBack() {
+  if (window._pitchStepIdx > 0) {
+    window._pitchStepIdx--;
+    renderPitchStep();
+  }
+}
+
+function selectNote(bi, ti, n) { selectNotePiano(bi, ti, n); }
+
+
+function playMelody() {
+  if (!songPitches.length) return;
+  const cards = getCards();
+  let ms = 0;
+  const cardEls = document.querySelectorAll('.pitch-block-card');
+
+  songBlocks.forEach((id, bi) => {
+    const card = cards.find(c=>c.id===id);
+    if (!card) return;
+
+    // Highlight the block card when it starts
+    const blockStart = ms;
+    setTimeout(()=>{
+      if(cardEls[bi]) { cardEls[bi].style.outline = '2px solid white'; }
+    }, blockStart);
+    setTimeout(()=>{
+      if(cardEls[bi]) cardEls[bi].style.outline = '';
+    }, blockStart + card.totalMs - 20);
+
+    // Play each tap's note at its correct time
+    card.taps.forEach((tapMs, ti) => {
+      const note = songPitches[bi] && songPitches[bi][ti];
+      if (!note) return;
+      // Duration = time until next tap (or end of block), capped nicely
+      const nextTapMs = ti + 1 < card.taps.length ? card.taps[ti+1] : card.totalMs;
+      const noteDur = Math.min((nextTapMs - tapMs) / 1000 * 0.88, 1.2);
+      setTimeout(() => playNote(note, Math.max(noteDur, 0.15), 0.5, 2), ms + tapMs);
+    });
+
+    ms += card.totalMs;
+  });
+}
+
+function finishMelody() {
+  document.getElementById('pitch-section').classList.remove('visible');
+  showChordSection();
+}
+
+
+
+// ===== CHORDS =====
+const CHORD_VOICINGS = {
+  C:['c/3','e/3','g/3'], D:['d/3','f/3','a/3'],
+  E:['e/3','g/3','b/3'], F:['f/3','a/3','c/4'],
+  G:['g/3','b/3','d/4'], A:['a/2','c/3','e/3'],
+  B:['b/2','d/3','f/3'],
+};
+const CHORD_AUDIO = {
+  C:[130.81,164.81,196.00], D:[146.83,174.61,220.00],
+  E:[164.81,196.00,246.94], F:[174.61,220.00,261.63],
+  G:[196.00,246.94,293.66], A:[220.00,261.63,329.63],
+  B:[246.94,293.66,369.99],
+};
+const CHORD_NAMES = ['C','D','E','F','G','A','B'];
+let songChords = [];
+
+function getCardBeatInfo(cardId) {
+  return ({
+    ta:    {total:1,  taps:[1]},
+    titi:  {total:1,  taps:[0.5,0.5]},
+    taa:   {total:2,  taps:[2]},
+    tatata:{total:3,  taps:[1,1,1]},
+    taaaa: {total:4,  taps:[4]},
+
+  })[cardId] || {total:1,taps:[1]};
+}
+
+let activeChord = null;
+let chordDragging = false;
+let chordLastPainted = -1;
+
+function showChordSection() {
+  const sec = document.getElementById('chord-section');
+  songChords = songBlocks.map(()=>null);
+  activeChord = null;
+
+  // Build palette
+  const palette = document.getElementById('chord-palette');
+  palette.innerHTML = '';
+  CHORD_NAMES.forEach(name => {
+    const btn = document.createElement('button');
+    btn.className = 'chord-pal-btn';
+    btn.id = 'cpb-' + name;
+    btn.textContent = name;
+    btn.onclick = () => activateChord(name);
+    palette.appendChild(btn);
+  });
+
+  // Build lane
+  renderChordLane();
+
+  sec.classList.add('visible');
+  document.getElementById('chord-play-btn').disabled = true;
+  document.getElementById('show-notation-btn').disabled = true;
+  sec.scrollIntoView({behavior:'smooth', block:'start'});
+  setupChordDragListeners();
+}
+
+function activateChord(name) {
+  activeChord = name;
+  document.querySelectorAll('.chord-pal-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('cpb-' + name);
+  if (btn) btn.classList.add('active');
+  playChordAudio(name, 0.28, 0);
+  document.getElementById('chord-hint-bar').textContent =
+    `✏️ "${name}" selected — click a block or drag across several to paint`;
+}
+
+function paintChordBlock(bi) {
+  if (!activeChord || bi < 0 || bi >= songBlocks.length) return;
+  if (bi === chordLastPainted) return;
+  chordLastPainted = bi;
+  songChords[bi] = activeChord;
+  refreshChordLaneBlock(bi);
+  const all = songChords.every(c=>c!==null);
+  document.getElementById('chord-play-btn').disabled = !all;
+  document.getElementById('show-notation-btn').disabled = !all;
+}
+
+function refreshChordLaneBlock(bi) {
+  const el = document.getElementById('clb-' + bi);
+  if (!el) return;
+  const ch = songChords[bi];
+  const nameEl = el.querySelector('.clb-chord-name');
+  if (nameEl) {
+    nameEl.textContent = ch || '–';
+    nameEl.className = 'clb-chord-name ' + (ch ? 'set' : 'unset');
+  }
+  const chordColors = {C:'#ff6b6b',D:'#fdcb6e',E:'#6bcb77',F:'#4ecdc4',G:'#a29bfe',A:'#e17055',B:'#fd79a8'};
+  el.style.background = ch ? chordColors[ch]+'2a' : 'var(--surface2)';
+  el.style.borderColor = ch ? chordColors[ch]+'88' : 'rgba(255,255,255,0.1)';
+}
+
+function renderChordLane() {
+  const cards = getCards();
+  const lane = document.getElementById('chord-lane');
+  lane.innerHTML = '';
+  songBlocks.forEach((id, bi) => {
+    const card = cards.find(c=>c.id===id);
+    if (!card) return;
+
+    // Build pitch pills — one per tap
+    const taps = card.taps || [0];
+    const pitchPills = taps.map((_, ti) => {
+      const p = songPitches[bi] && songPitches[bi][ti];
+      return p
+        ? `<span style="background:${card.color}33;color:${card.color};border:1px solid ${card.color}88;border-radius:6px;padding:1px 6px;font-family:'Playfair Display',serif;font-size:0.85rem">${p}</span>`
+        : `<span style="color:rgba(255,255,255,0.2);font-size:0.75rem;font-weight:700">?</span>`;
+    }).join('<span style="color:var(--muted);font-size:0.7rem;margin:0 1px">·</span>');
+
+    const el = document.createElement('div');
+    el.className = 'chord-lane-block';
+    el.id = 'clb-' + bi;
+    el.style.color = card.color;
+    el.innerHTML = `
+      <div class="clb-rhythm-icon">${card.icon}</div>
+      <div class="clb-rhythm-name">${card.name}</div>
+      <div style="display:flex;align-items:center;gap:2px;flex-wrap:wrap;justify-content:center;min-height:22px;margin:2px 0">${pitchPills}</div>
+      <div class="clb-chord-name unset">–</div>
+    `;
+    lane.appendChild(el);
+  });
+}
+
+function biFromPoint(x, y) {
+  const blocks = document.querySelectorAll('.chord-lane-block');
+  for (let i = 0; i < blocks.length; i++) {
+    const r = blocks[i].getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return i;
+  }
+  return -1;
+}
+
+let _chordDragSetup = false;
+function setupChordDragListeners() {
+  if (_chordDragSetup) return;
+  _chordDragSetup = true;
+  const lane = document.getElementById('chord-lane');
+
+  lane.addEventListener('mousedown', e => {
+    if (!activeChord) return;
+    chordDragging = true; chordLastPainted = -1;
+    paintChordBlock(biFromPoint(e.clientX, e.clientY));
+  });
+  window.addEventListener('mousemove', e => {
+    if (!chordDragging || !activeChord) return;
+    const bi = biFromPoint(e.clientX, e.clientY);
+    document.querySelectorAll('.chord-lane-block').forEach((b,i)=>b.classList.toggle('drag-hi', i===bi));
+    paintChordBlock(bi);
+  });
+  window.addEventListener('mouseup', () => {
+    chordDragging = false; chordLastPainted = -1;
+    document.querySelectorAll('.chord-lane-block').forEach(b=>b.classList.remove('drag-hi'));
+  });
+  lane.addEventListener('touchstart', e => {
+    if (!activeChord) return;
+    chordDragging = true; chordLastPainted = -1;
+    const t = e.touches[0];
+    paintChordBlock(biFromPoint(t.clientX, t.clientY));
+    e.preventDefault();
+  }, {passive:false});
+  window.addEventListener('touchmove', e => {
+    if (!chordDragging || !activeChord) return;
+    const t = e.touches[0];
+    const bi = biFromPoint(t.clientX, t.clientY);
+    document.querySelectorAll('.chord-lane-block').forEach((b,i)=>b.classList.toggle('drag-hi', i===bi));
+    paintChordBlock(bi);
+    e.preventDefault();
+  }, {passive:false});
+  window.addEventListener('touchend', () => {
+    chordDragging = false; chordLastPainted = -1;
+    document.querySelectorAll('.chord-lane-block').forEach(b=>b.classList.remove('drag-hi'));
+  });
+}
+
+function playChordAudio(name, vol=0.28, startMs=0) {
+  const freqs = CHORD_AUDIO[name]; if(!freqs) return;
+  freqs.forEach((f,i) => setTimeout(()=>playNote2(f,0.75,vol), startMs+i*65));
+}
+
+function playNote2(freq, dur=0.6, vol=0.3) {
+  playPianoNote(freq, dur, vol);
+}
+
+function playChordSong() {
+  const cards=getCards(); let ms=0;
+  songBlocks.forEach((id,bi)=>{
+    const card=cards.find(c=>c.id===id);
+    if(!card) return;
+    if (songChords[bi]) playChordAudio(songChords[bi], 0.24, ms);
+    ms+=card.totalMs;
+  });
+}
+
+function playMelodyWithChords() {
+  const cards=getCards(); let ms=0;
+  songBlocks.forEach((id,bi)=>{
+    const card=cards.find(c=>c.id===id);
+    if(!card) return;
+    card.taps.forEach((tapMs,ti)=>{
+      const n=songPitches[bi]&&songPitches[bi][ti];
+      if(n){
+        const nxt=ti+1<card.taps.length?card.taps[ti+1]:card.totalMs;
+        const dur=Math.min((nxt-tapMs)/1000*0.85,1.2);
+        setTimeout(()=>playNote(n,Math.max(dur,0.15),0.45,2),ms+tapMs);
+      }
+    });
+    if (songChords[bi]) playChordAudio(songChords[bi],0.20,ms);
+    ms+=card.totalMs;
+  });
+}
+
+function skipChords() {
+  document.getElementById('chord-section').classList.remove('visible');
+  showNotation();
+}
+
+function showNotation() {
+  const sec=document.getElementById('notation-section');
+  sec.style.display='block';
+  // Render immediately but also after scroll settles, in case width changes
+  setTimeout(()=>{
+    renderNotation();
+    sec.scrollIntoView({behavior:'smooth',block:'start'});
+    // Re-render once scroll has settled and container has final width
+    setTimeout(renderNotation, 600);
+  }, 50);
+}
+
+// ===== VEXFLOW NOTATION =====
+
+// ===== HELPERS FOR NOTATION =====
+function effectiveChord(bi) {
+  return songChords[bi] || null;
+}
+
+
+
+function renderNotation() {
+  const container = document.getElementById('notation-canvas');
+  container.innerHTML = '';
+
+  if (typeof ABCJS === 'undefined') {
+    container.innerHTML = '<p style="color:#999;padding:20px;text-align:center;font-family:sans-serif">Loading notation… try again in a moment.</p>';
+    setTimeout(renderNotation, 1200);
+    return;
+  }
+
+  const cards = getCards();
+  const BEATS = beatsPerMeasure();
+  const trebleNotes = [];
+  const bassNotes = [];
+
+  songBlocks.forEach((id, bi) => {
+    const card = cards.find(c => c.id === id);
+    if (!card) return;
+    const info = getCardBeatInfo(card.id);
+    const pitches = songPitches[bi] || [];
+    const chord = effectiveChord(bi);
+
+    // Treble: one note per tap, pair eighths as beamed (no space between)
+    const tapNotes = info.taps.map((beats, ti) => {
+      const letter = (pitches[ti] || 'B').toLowerCase();
+      const dur = beats===4?'4':beats===3?'3':beats===2?'2':beats===1?'':'/';
+      return { abc: letter + dur, beats };
+    });
+
+    let i = 0;
+    while (i < tapNotes.length) {
+      if (tapNotes[i].beats===0.5 && i+1<tapNotes.length && tapNotes[i+1].beats===0.5) {
+        trebleNotes.push({ abc: tapNotes[i].abc + tapNotes[i+1].abc, beats: 1 });
+        i += 2;
+      } else {
+        trebleNotes.push(tapNotes[i]);
+        i++;
+      }
+    }
+
+    // Bass: chord for full block duration — all roots in C3-B3 octave
+    const CHORD_ABC = {
+      C:'[CEG]',  // C4 E4 G4
+      D:'[DFA]',  // D4 F4 A4
+      E:'[EGB]',  // E4 G4 B4
+      F:'[FAc]',  // F4 A4 C5
+      G:'[GBd]',  // G4 B4 D5
+      A:'[Ace]',  // A4 C5 E5
+      B:'[BdF]',  // B4 D5 F5 -- keep F in upper range
+    };
+    const chordAbc = chord ? (CHORD_ABC[chord] || 'z') : 'z';
+    const dur = info.total===4?'4':info.total===3?'3':info.total===2?'2':info.total===1?'':'/';
+    bassNotes.push({ abc: chordAbc + dur, beats: info.total });
+  });
+
+  function toMeasures(notes) {
+    const measures = []; let cur = []; let curBeats = 0;
+    const addRest = b => { if(b>=4) cur.push('z4'); else if(b>=2) cur.push('z2'); else if(b>=1) cur.push('z'); else cur.push('z/'); };
+    notes.forEach(n => {
+      cur.push(n.abc); curBeats += n.beats;
+      if (Math.abs(curBeats - BEATS) < 0.01) { measures.push(cur.join(' ')); cur = []; curBeats = 0; }
+      else if (curBeats > BEATS + 0.01) { measures.push(cur.join(' ')); cur = []; curBeats = 0; }
+    });
+    if (cur.length > 0) { const rem = BEATS - curBeats; if (rem > 0.1) addRest(rem); measures.push(cur.join(' ')); }
+    return measures;
+  }
+
+  const tMeasures = toMeasures(trebleNotes);
+  const bMeasures = toMeasures(bassNotes);
+  const nM = Math.max(tMeasures.length, bMeasures.length, 1);
+  while (tMeasures.length < nM) tMeasures.push('z4');
+  while (bMeasures.length < nM) bMeasures.push('z4');
+
+  const bpm = TEMPOS[tempoIdx].bpm;
+  const ts = TIME_SIGS[timeSigIdx];
+  const trebleLine = tMeasures.map(m => m + ' |').join(' ');
+  const bassLine   = bMeasures.map(m => m + ' |').join(' ');
+
+  const abcStr =
+`X:1
+T:My Song
+M:${ts.label}
+L:1/4
+Q:1/4=${bpm}
+K:C
+%%score {RH | LH}
+V:RH clef=treble
+${trebleLine}
+V:LH clef=bass middle=d
+${bassLine}
+`;
+
+  try {
+    const W = Math.min(window.innerWidth - 80, 700);
+    ABCJS.renderAbc(container, abcStr, {
+      scale: 1.3,
+      staffwidth: W,
+      wrap: { minSpacing: 1.8, maxSpacing: 2.8, preferredMeasuresPerLine: 4 },
+    });
+  } catch(e) {
+    container.innerHTML = '<p style="color:red;padding:16px;font-family:sans-serif">Notation error: ' + e.message + '</p>';
+  }
+}
+
+// ===== AUTO-RESIZE FOR IFRAME EMBED =====
+function reportHeight() {
+  const h = document.body.scrollHeight;
+  window.parent.postMessage({ type: 'resize', height: h }, '*');
+}
+// Report on load and whenever content changes
+window.addEventListener('load', reportHeight);
+new MutationObserver(reportHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+
+// ===== INIT =====
+function updateBlockCount(){
+  const used = songBlocks.reduce((sum, id) => {
+    const card = getCards().find(c=>c.id===id);
+    const info = card ? getCardBeatInfo(card.id) : {total:1};
+    return sum + info.total;
+  }, 0);
+  const total = maxBeats();
+  const pct = Math.min(Math.round(used/total*100),100);
+  const ts = TIME_SIGS[timeSigIdx].label;
+  document.getElementById('block-count').textContent =
+    `${used.toFixed(used%1===0?0:1)} / ${total} beats (${ts} × ${MEASURES})`;
+  // Enable/disable perform based on beats used
+  const hasBlocks = songBlocks.length > 0;
+  document.getElementById('preview-btn').disabled = !hasBlocks;
+  document.getElementById('perform-btn').disabled = !hasBlocks;
+}
+
+renderTempos(); renderTimeSigs(); renderCards();
+</script>
+</body>
+</html>
